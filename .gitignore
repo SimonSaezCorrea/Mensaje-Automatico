@@ -1,8 +1,39 @@
 
-*.xlsx
-
+# Archivos de entorno
 .env
+.env.local
 
-utils/__pycache__/
+# Archivos de datos (Excel)
+*.xlsx
+*.xls
+!.env.example
 
+# Cache de Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Archivos temporales de Office
+~$*

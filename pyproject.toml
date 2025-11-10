@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mensaje-automatico"
+version = "1.0.0"
+description = "Automatización de mensajes WhatsApp desde datos de Excel"
+authors = [{name = "SimonSaezCorrea"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "openpyxl>=3.1.0",
+    "pyautogui>=0.9.54",
+    "pyperclip>=1.8.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pandas>=2.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", ".venv", "dist", "build"]

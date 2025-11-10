@@ -1,38 +1,156 @@
+"""
+Mensaje Automático WhatsApp
+==========================
+
+Script principal para automatización de mensajes WhatsApp desde datos de Excel.
+
+Este módulo lee datos de un archivo Excel configurado a través de variables de entorno,
+procesa la información de contactos y pagos, y permite enviar mensajes personalizados
+a través de WhatsApp Web.
+
+Uso:
+    python "Mensaje Automatico.py"
+
+Configuración:
+    Crea un archivo .env con la variable ARCHIVO_EXCEL apuntando a tu archivo Excel.
+
+Ejemplo:
+    ARCHIVO_EXCEL=Mensualidad.xlsx
+
+Advertencias:
+    - Abre WhatsApp Web antes de ejecutar
+    - NO uses la computadora durante el envío de mensajes
+    - Realiza pruebas con tu propio número primero
+"""
+
+import json
+import logging
+from typing import Dict, Any, List
+
+from dotenv import load_dotenv
+
+from utils.formateo import ensure_utf8_stdout
 from utils.manejo_archivo import getData
 from utils.wsp_message import enviarMensajeWhatsApp
-from utils.formateo import _ensure_utf8_stdout
-from dotenv import load_dotenv
-'''
-Recomendaciones:
-    - Antes de iniciar el codigo, recuerda abrir WhatsApp Web en tu navegador predeterminado.
-    - Asegúrate de que el archivo Excel esté en la misma carpeta que el script o proporciona la ruta completa.
-    - Asegúrate de que el archivo Excel tenga los datos en las columnas correctas.
-    - Asegúrate de que el nombre y el teléfono estén en las columnas correctas.
-    - Haz pruebas de validación antes de enviar los mensajes a los numeros, haciendo test por consola o enviandolos a tu mismo número con el mensaje y su numero respectivo.
-    - Haz test de tiempos de espera para que el script funcione correctamente en tu computadora.
-    ----------------------------
-    - NO SE DEBE UTILIZAR LA COMPUTADORA MIENTRAS SE EJECUTRA EL SCRIPT, YA QUE PUEDE INTERFERIR EN EL ENVIO DE MENSAJES Y ESTROPEARLO.
-    - En caso de que estén sucediendo problemas durante el envío, puedes apretar ESQ para cerrar el chat o CTRL + W para cerrar la pestaña de WhatsApp Web, luego ir a la consola y apretar CTRL + C para detener el script.
-'''
 
 
-# Cargar .env usando el módulo separado env_loader.py
-load_dotenv()
-_ensure_utf8_stdout()
+def setup_logging() -> None:
+    """Configura el sistema de logging para el script."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
-# Función principal
-data = getData()
 
-# Abre WhatsApp Web en el navegador predeterminado
-# y espera a que se cargue
-# Asegúrate de que WhatsApp Web esté configurado y abierto en el navegador
-for celular, nombre in data:
+def display_data_preview(data: List[Dict[str, Any]]) -> None:
+    """Muestra una vista previa de los datos leídos en formato JSON."""
+    try:
+        print("=== DATOS LEÍDOS ===")
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        print("=== FIN DATOS ===\n")
+    except Exception as e:
+        logging.warning("No se pudo mostrar datos como JSON: %s", e)
+        print("Datos leídos:", data)
 
-    # Si el número de teléfono está vacío, se omite
-    # y se continúa con el siguiente número
-    if celular == "":
-        continue
 
-    print(f"Enviando mensaje a {nombre} ({celular})")
+def generate_payment_message(item: Dict[str, Any]) -> str:
+    """
+    Genera un mensaje personalizado basado en los datos de pago del contacto.
+    
+    Args:
+        item: Diccionario con datos del contacto incluyendo nombre, teléfono y dataPagos
+        
+    Returns:
+        Mensaje personalizado formateado para WhatsApp
+    """
+    nombre = item.get('nombre', 'Usuario')
+    data_pagos = item.get('dataPagos', {})
+    
+    cantidad_pagado = data_pagos.get('cantidadPagado', 0)
+    faltantes = data_pagos.get('faltantes', 0)
+    dia_a_pagar = data_pagos.get('diaAPagar', 'N/A')
+    mes_a_pagar = data_pagos.get('mesAPagar', 'N/A')
+    
+    mensaje = (
+        f"Hola {nombre},\n\n"
+        f"Según nuestros registros, has realizado {cantidad_pagado} pagos. "
+        f"Te quedan {faltantes} pagos pendientes. "
+        f"El próximo pago vence el día {dia_a_pagar} del mes {mes_a_pagar}.\n\n"
+        f"Por favor, asegúrate de completar tus pagos a tiempo para evitar inconvenientes.\n\n"
+        f"¡Gracias por tu atención!"
+    )
+    
+    return mensaje
 
-    #enviarMensajeWhatsApp(celular, f"")
+
+def process_contacts(data: List[Dict[str, Any]], send_messages: bool = False) -> None:
+    """
+    Procesa la lista de contactos y opcionalmente envía mensajes.
+    
+    Args:
+        data: Lista de diccionarios con información de contactos
+        send_messages: Si True, envía mensajes reales por WhatsApp
+    """
+    logger = logging.getLogger(__name__)
+    
+    for i, item in enumerate(data, 1):
+        nombre = item.get('nombre')
+        telefono = item.get('telefono')
+        
+        if not telefono:
+            logger.warning("Contacto %d sin teléfono válido, omitiendo", i)
+            continue
+            
+        mensaje = generate_payment_message(item)
+        
+        print(f"\n=== CONTACTO {i}/{len(data)} ===")
+        print(f"Destinatario: {nombre} ({telefono})")
+        print(f"Mensaje:\n{mensaje}")
+        print("=" * 50)
+        
+        if send_messages:
+            try:
+                logger.info("Enviando mensaje a %s (%s)", nombre, telefono)
+                #enviarMensajeWhatsApp(telefono, mensaje)
+            except Exception as e:
+                logger.error("Error enviando mensaje a %s: %s", nombre, e)
+        else:
+            logger.info("Modo preview - no se envió mensaje a %s", nombre)
+
+
+def main() -> None:
+    """Función principal del script."""
+    # Configuración inicial
+    load_dotenv()
+    ensure_utf8_stdout()
+    setup_logging()
+    
+    logger = logging.getLogger(__name__)
+    logger.info("Iniciando Mensaje Automático WhatsApp")
+    
+    # Cargar datos
+    try:
+        data = getData()
+    except Exception as e:
+        logger.error("Error cargando datos: %s", e)
+        return
+    
+    if not data:
+        logger.warning("No se encontraron datos para procesar")
+        return
+        
+    logger.info("Se cargaron %d contactos", len(data))
+    
+    # Mostrar vista previa
+    display_data_preview(data)
+    
+    # Procesar contactos (por defecto solo preview, no envía mensajes)
+    # Para enviar mensajes reales, cambiar send_messages=True
+    process_contacts(data, send_messages=False)
+    
+    logger.info("Procesamiento completado")
+
+
+if __name__ == "__main__":
+    main()

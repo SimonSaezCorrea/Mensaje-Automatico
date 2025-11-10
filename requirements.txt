@@ -1,0 +1,8 @@
+# Dependencias principales
+python-dotenv>=1.0.0
+openpyxl>=3.1.0
+pyautogui>=0.9.54
+pyperclip>=1.8.2
+
+# Dependencias opcionales para mejoras
+pandas>=2.0.0
